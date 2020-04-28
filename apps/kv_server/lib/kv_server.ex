@@ -16,19 +16,47 @@ defmodule KVServer do
   end
 
   defp serve(socket) do
-    socket |> read_line |> write_line(socket)
+    socket
+    |> read_line
+    |> parse_command
+    |> write_line(socket)
 
     serve(socket)
   end
 
   defp read_line(socket) do
-    case :gen_tcp.recv(socket, 0) do
-      {:ok, line} -> line
-      {:error, :closed} -> Logger.info("Client disconnected")
+    :gen_tcp.recv(socket, 0)
+  end
+
+  defp parse_command({:ok, line}) do
+    case KVServer.Command.parse(line) do
+      {:ok, command} -> KVServer.Command.run(command)
+      {:error, _} = err -> err
     end
   end
 
-  defp write_line(line, socket) do
-    :gen_tcp.send(socket, line)
+  defp parse_command({:error, _} = err) do
+    err
+  end
+
+  defp write_line({:ok, text}, socket) do
+    :gen_tcp.send(socket, text)
+  end
+
+  defp write_line({:error, :unknown_command}, socket) do
+    :gen_tcp.send(socket, "UNKNOWN COMMAND\r\n")
+  end
+
+  defp write_line({:error, :not_found}, socket) do
+    :gen_tcp.send(socket, "NOT FOUND\r\n")
+  end
+
+  defp write_line({:error, :closed}, _socket) do
+    exit(:shutdown)
+  end
+
+  defp write_line({:error, error}, socket) do
+    :gen_tcp.send(socket, "ERROR\r\n")
+    exit(error)
   end
 end
