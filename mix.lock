@@ -1,0 +1,3 @@
+%{
+  "kv": {:git, "https://github.com/vicentereig/kv.git", "ff9a6b75cdb9cd5154c7a8565cbb3e8a4b33d28f", []},
+}
